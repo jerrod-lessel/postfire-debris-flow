@@ -1,1 +1,10 @@
-
+pytest
+numpy<2
+pysheds
+rasterio
+geopandas
+rioxarray
+pystac-client
+planetary-computer
+rasterstats
+richdem
