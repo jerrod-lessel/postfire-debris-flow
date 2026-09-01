@@ -1,7 +1,7 @@
 import math
 import pytest
 
-from m1 import (
+from pfdf.m1 import (
     BasinPredictors, RainfallConvention, likelihood, hazard_class,
     rainfall_threshold, to_model_rainfall,
 )
