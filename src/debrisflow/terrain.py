@@ -17,6 +17,10 @@ WHY BASIN SCALE MATTERS MORE THAN ANYTHING ELSE HERE
 
 import numpy as np
 
+# Restores np.in1d, which numpy 2 removed but pysheds 0.5 still calls.
+# Must be imported before any pysheds flow-accumulation call. See _compat.py.
+from debrisflow import _compat  # noqa: F401
+
 # M1's slope break point. Steeper than this is where runoff-driven rilling and
 # dry ravel actually mobilise sediment into channels.
 STEEP_SLOPE_DEGREES = 23.0
