@@ -1,10 +1,9 @@
 pytest
-numpy<2
+numpy
 pysheds
 rasterio
-geopandas
 rioxarray
+geopandas
+rasterstats
 pystac-client
 planetary-computer
-rasterstats
-richdem
