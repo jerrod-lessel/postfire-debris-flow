@@ -55,8 +55,9 @@ src/debrisflow/
     terrain.py     Horn slope, pysheds delineation -> the T variable
     soils.py       KF-factor aggregation, Soil Data Access -> the S variable
     _compat.py     numpy 2 shim for pysheds
-tests/             77 tests
-00_model_driver.ipynb   Colab driver: pulls this repo, runs it, shows results
+tests/             92 tests
+00_model_driver.ipynb        Colab driver: pulls this repo, runs it, shows results
+01_bridge_fire_ingest.ipynb  Colab driver: real data ingest for the 2024 Bridge Fire
 ```
 
 Each module separates **pure array math** from **network IO**. That split is what makes a pipeline with remote data dependencies unit-testable: the notebook fetches, the tested functions compute.
@@ -66,6 +67,8 @@ Each module separates **pure array math** from **network IO**. That split is wha
 **Own basin delineation, not NHDPlus catchments.** M1 was calibrated on watersheds of roughly 0.1 to 8 km². Larger basins average severity and steepness over terrain that never contributes sediment, diluting T and under-predicting hazard. Basins are delineated with pysheds from the 10 m DEM, and any basin outside the calibration range is flagged as an extrapolation rather than presented with equal confidence.
 
 **10 m DEM, not coarser.** Slope statistics are resolution dependent. A plane that reads 45° at 10 m reads 18.4° at 30 m and 6.3° at 90 m. Since M1's threshold is 23°, a coarse DEM silently erases the steep pixels the model depends on.
+
+**Burn severity is computed at 20 m, not resampled up to 10 m.** NBR needs B08 (10 m) and B12 (20 m) on a shared grid, and the two directions are not equivalent: averaging B08 down to 20 m discards detail that was really measured, while interpolating B12 up to 10 m fabricates detail that was not. This pipeline takes the first option and computes dNBR natively at 20 m. Where T requires severity on the 10 m terrain grid, the 20 m severity raster is expanded by nearest neighbour, which replicates a real measurement across the four cells it covers rather than inventing intermediate values.
 
 **STATSGO primary, SSURGO as a sensitivity axis.** USGS operational assessments use STATSGO, and M1's coefficients were fitted against it. Using STATSGO for headline numbers keeps cross-validation against published assessments apples-to-apples. SSURGO is finer and genuinely better data, so it runs as a second pass and becomes a documented sensitivity result rather than an unexplained deviation.
 
