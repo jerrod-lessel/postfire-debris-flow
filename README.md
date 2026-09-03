@@ -2,7 +2,7 @@
 
 Predicting which burned canyons will produce debris flows, and how hard it has to rain to set them off.
 
-**Status:** model layer complete and tested. Real-data ingest not started.
+**Status:** model layer complete and tested, soil ingest verified against the live USDA service. Satellite and elevation ingest not started.
 
 ---
 
@@ -76,21 +76,20 @@ Each module separates **pure array math** from **network IO**. That split is wha
 ## Testing
 
 ```bash
-python -m pytest -q          # 77 passed
+python -m pytest -q          # 92 passed
 ```
 
 A wrong hazard map is visually indistinguishable from a correct one, so correctness here cannot be established by inspection. Slope is verified against planes whose angle is known analytically. The rainfall unit error, the T intersection error and the soil null-handling error each have a test that fails if reintroduced. `test_compat.py` runs real D8 flow accumulation on a generated GeoTIFF, so if pysheds ever ships a numpy 2 compatible release, deleting the shim is immediately safe or immediately not.
 
 ## Known limitations
 
-- **No real data yet.** Everything to date has been verified against synthetic scenes.
-- **Soil Data Access queries are unverified.** The aggregation math is tested; the SDA SQL and endpoint have not been run against the live service. Call `check_sda_connection()` before trusting soil output.
+- **No imagery or elevation data yet.** Burn severity and terrain have been verified against synthetic scenes only. Soil is verified against live STATSGO output.
 - **No cross-validation against the official USGS `pfdf` package.** Planned, and the strongest validation artifact available for this project.
 - **Likelihood only.** The Gartner (2014) volume model and combined hazard classification are not implemented.
 
 ## Roadmap
 
-1. Verify Soil Data Access connectivity and schema
+1. ~~Verify Soil Data Access connectivity and schema~~ **done.** Live STATSGO output is captured as a regression fixture in tests/test_soils_sda.py.
 2. Real data ingest: pre/post Sentinel-2 and 3DEP DEM for the 2024 Bridge Fire (San Gabriel Mountains)
 3. Cross-validate basin probabilities against the official USGS `pfdf` implementation
 4. Sensitivity analysis: which basins are High under *every* assumption, and which flip depending on dNBR threshold, basin delineation and soil dataset. USGS publishes single-scenario assessments without uncertainty bounds, so this is the piece that is genuinely additional.
