@@ -215,3 +215,95 @@ def kf_by_mapunit_sql(mukeys, dataset="statsgo"):
         f"WHERE c.mukey IN ({keys}) "
         "ORDER BY c.mukey, c.comppct_r DESC, ch.hzdept_r"
     )
+
+
+# --- parsing and grouping live SDA rows ---------------------------------------
+#
+# Soil Data Access returns everything as STRINGS, in a leading-dot format
+# (".37" not "0.37"), with nulls as None. It also returns one flat row per
+# horizon, so a single map unit arrives as an interleaved stack: several
+# components, each with several horizons, all mixed together. The functions
+# below turn that into the clean numbers the aggregation math expects.
+#
+# This layer exists because real service output looked nothing like the tidy
+# float lists the pure functions were written against.
+
+def parse_kf(raw):
+    """Parse one kffact cell from SDA into a float, or NaN if null/unparseable.
+
+    Handles the leading-dot format (".37"), plain floats, empty strings, the
+    literal string "None", and actual None. Anything unparseable becomes NaN
+    rather than raising, because a single bad cell should not kill a basin.
+    """
+    if raw is None:
+        return float("nan")
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    text = str(raw).strip()
+    if text == "" or text.lower() in ("none", "null", "na"):
+        return float("nan")
+    try:
+        return float(text)          # float(".37") == 0.37
+    except ValueError:
+        return float("nan")
+
+
+def parse_int(raw, default=0):
+    """Parse an integer-ish SDA cell (comppct_r, hzdept_r) with a fallback."""
+    if raw is None:
+        return default
+    try:
+        return int(float(str(raw).strip()))
+    except (ValueError, TypeError):
+        return default
+
+
+def group_rows_by_component(rows):
+    """Group flat SDA horizon rows into {cokey: (mukey, comppct, [horizons])}.
+
+    Each horizon is (depth_top_cm, kf). Horizons are sorted by depth so the
+    surface horizon is first, which is what horizon_to_component expects.
+
+    Rows are (mukey, cokey, comppct_r, kffact, hzdept_r, hzdepb_r), the column
+    order produced by kf_by_mapunit_sql.
+    """
+    grouped = {}
+    for row in rows:
+        mukey, cokey, comppct, kf, top = row[0], row[1], row[2], row[3], row[4]
+        entry = grouped.setdefault(
+            cokey, {"mukey": mukey, "comppct": parse_int(comppct), "horizons": []}
+        )
+        entry["horizons"].append((parse_int(top), parse_kf(kf)))
+    for entry in grouped.values():
+        entry["horizons"].sort(key=lambda h: h[0])   # shallowest first
+    return grouped
+
+
+def kf_by_mapunit(rows, surface_only=True):
+    """Turn raw SDA rows into {mukey: (kf, coverage)}.
+
+    Full chain: parse -> group by component -> surface horizon per component
+    -> weight components by comppct_r -> one KF per map unit.
+
+    The caller then weights these by area intersected with the basin, via
+    mapunit_to_basin, to get the basin's S value.
+    """
+    components = group_rows_by_component(rows)
+
+    by_mapunit = {}
+    for entry in components.values():
+        depths = [h[0] for h in entry["horizons"]]
+        kfs = [h[1] for h in entry["horizons"]]
+        thicknesses = [
+            (depths[i + 1] - depths[i]) if i + 1 < len(depths) else 1
+            for i in range(len(depths))
+        ]
+        kf, _ = horizon_to_component(kfs, thicknesses, surface_only=surface_only)
+        by_mapunit.setdefault(entry["mukey"], {"kf": [], "pct": []})
+        by_mapunit[entry["mukey"]]["kf"].append(kf)
+        by_mapunit[entry["mukey"]]["pct"].append(entry["comppct"])
+
+    return {
+        mukey: component_to_mapunit(d["kf"], d["pct"])
+        for mukey, d in by_mapunit.items()
+    }
