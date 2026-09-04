@@ -128,7 +128,7 @@ Two pictures taken 40 days apart also differ for boring reasons: sun angle, atmo
 
 So three steps run before routing. Fill the pits. Resolve the flats that filling creates, since a perfectly flat cell has no lowest neighbour either. Then assign every cell a direction to its steepest neighbour and count how many cells drain through each point.
 
-On the Bridge Fire, 0.79% of cells were altered by filling. The deepest fill was 74.7 m, which turned out to be San Gabriel Reservoir. A reservoir is a real closed depression and filling it is correct.
+On the Bridge Fire, 0.79% of cells were altered by filling. The deepest fill was 74.7 m, which turned out to be San Gabriel Reservoir. A reservoir is a real closed depression and filling it seemed the correct course of action here.
 
 **Slope comes from the raw DEM, routing from the repaired one.** This is worth stating clearly because it is easy to get backwards. Filling deliberately changes elevations, which is right for routing and wrong for measurement. Computing slope on the filled surface would report gradients invented by the fill algorithm.
 
