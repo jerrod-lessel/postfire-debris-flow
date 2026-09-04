@@ -12,7 +12,7 @@ After a wildfire, two things happen to a hillside. The plants that held the soil
 
 When a short, intense burst of rain hits a steep burned slope, the loose material on that slope starts moving. It picks up more material as it goes, and what reaches the canyon bottom is a fast slurry of mud, rock and burned vegetation. That is a debris flow. They kill people and destroy infrastructure, usually in the first winter after a fire, and usually from storms that would be completely unremarkable on unburned ground.
 
-The useful part is that they are predictable. Four things control whether a given canyon produces one: how steep it is, how badly it burned, how erodible the soil is, and how hard it rains. Staley and others (2017) fitted those four things to a database of real post-fire debris flows and produced a model that works well enough to run operational warning systems in the western United States.
+The useful part is that they are predictable. Four things control whether a given canyon produces one: how steep it is, how badly it burned, how erodible the soil is, and how hard it rains. Staley et al. (2017) fitted those four things to a database of real post-fire debris flows and produced a model that works well enough to run operational warning systems in the western United States.
 
 ## What this project does
 
