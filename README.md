@@ -183,7 +183,7 @@ A wrong hazard map looks exactly like a correct one, so correctness here cannot 
 
 Slope is checked against planes whose angle is known from trigonometry. The three classic errors above each have a test that fails if reintroduced. `test_compat.py` runs real D8 flow accumulation on a generated GeoTIFF, so if pysheds ever ships a numpy 2 compatible release, deleting the shim is either immediately safe or immediately not.
 
-Basin delineation is tested on synthetic flow grids small enough to verify by hand: a 3x3 where all eight neighbours drain to the centre catches a mis-encoded direction map, which would otherwise produce basins that drain the wrong way and look perfectly normal. There is also a property test on random grids checking that every labelled cell reaches its own basin's outlet before any other, a determinism test because greedy algorithms with tied sort keys silently reorder, and a cross-check against `pysheds.Grid.catchment` on a real DEM.
+Basin delineation is tested on synthetic flow grids small enough to verify by hand: a 3x3 where all eight neighbours drain to the center catches a mis-encoded direction map, which would otherwise produce basins that drain the wrong way and look perfectly normal. There is also a property test on random grids checking that every labelled cell reaches its own basin's outlet before any other, a determinism test because greedy algorithms with tied sort keys silently reorder, and a cross-check against `pysheds.Grid.catchment` on a real DEM.
 
 The model tests are described under validation above.
 
