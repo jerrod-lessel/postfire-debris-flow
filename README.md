@@ -2,7 +2,7 @@
 
 Working out which burned canyons will produce debris flows, and how hard it has to rain to set them off.
 
-**Status:** complete pipeline, run end to end on the 2024 Bridge Fire. Model implementation cross-validated against the official USGS package. 150 tests passing.
+**Status:** complete pipeline, run end to end on the 2024 Bridge Fire. Model implementation cross-validated against the official USGS package. 151 tests passing.
 
 ---
 
@@ -148,7 +148,7 @@ src/debrisflow/
     basins.py      D8 catchment traversal and basin delineation
     soils.py       KF-factor aggregation, Soil Data Access, gives S
     _compat.py     numpy 2 shim for pysheds
-tests/             150 tests across 8 files
+tests/             151 tests across 8 files
 00_model_driver.ipynb        Colab driver: pulls this repo, runs it, shows results
 01_bridge_fire_ingest.ipynb  Colab driver: full ingest for the 2024 Bridge Fire
 ```
@@ -176,7 +176,7 @@ Note that the STATSGO spatial data lives in the `gsmmupolygon` table. The conven
 ## Testing
 
 ```bash
-python -m pytest -q          # 150 passed
+python -m pytest -q          # 151 passed
 ```
 
 A wrong hazard map looks exactly like a correct one, so correctness here cannot be established by looking at it. The tests are built around that.
