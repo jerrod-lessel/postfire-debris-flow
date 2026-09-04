@@ -288,22 +288,19 @@ def test_basin_attributes_without_burn_mask():
 # Cross-check against the reference implementation
 # --------------------------------------------------------------------------
 
-def test_matches_pysheds_catchment(tmp_path):
-    """`upstream_mask` must agree with pysheds' own catchment on real routing.
+def _cone_with_dimple(tmp_path):
+    """Build a small real DEM and route it with pysheds. Returns (fdir, acc).
 
-    The synthetic tests above prove this module is self-consistent. This one
-    proves it means the same thing as the reference, which is the check that
-    would catch a genuine misunderstanding of the D8 encoding.
+    A cone draining inward, with a dimple so conditioning has something to do
+    and the flow network is not trivially radial.
     """
-    pysheds = pytest.importorskip("pysheds")
+    pytest.importorskip("pysheds")
     rasterio = pytest.importorskip("rasterio")
     from pysheds.grid import Grid
 
     from debrisflow import _compat  # noqa: F401  numpy 2 shim
     from debrisflow import terrain
 
-    # A cone with a dimple, so conditioning has something to do and the flow
-    # network is non-trivial.
     n = 60
     yy, xx = np.mgrid[0:n, 0:n]
     dem = 100 + np.hypot(yy - n / 2, xx - n / 2) * 2.0
@@ -313,26 +310,77 @@ def test_matches_pysheds_catchment(tmp_path):
     path = tmp_path / "cone.tif"
     transform = rasterio.transform.from_origin(0, n * 10, 10, 10)
     with rasterio.open(path, "w", driver="GTiff", height=n, width=n, count=1,
-                       dtype="float32", crs="EPSG:32611", transform=transform) as dst:
+                       dtype="float32", crs="EPSG:32611", transform=transform,
+                       nodata=-9999) as dst:
         dst.write(dem, 1)
 
     grid = Grid.from_raster(str(path))
     raster = grid.read_raster(str(path))
     conditioned = terrain.condition_dem(grid, raster)
     fdir, acc = terrain.flow_grids(grid, conditioned)
+    return grid, fdir, np.asarray(fdir), np.asarray(acc)
 
-    fdir_arr = np.asarray(fdir)
-    acc_arr = np.asarray(acc)
 
-    # Seed at a well-connected interior cell.
-    interior = acc_arr.copy()
-    interior[0, :] = interior[-1, :] = interior[:, 0] = interior[:, -1] = 0
-    r, c = np.unravel_index(np.argmax(interior), interior.shape)
+def test_matches_pysheds_accumulation(tmp_path):
+    """The size of `upstream_mask` must equal pysheds' own flow accumulation.
+
+    This is the cross-check that establishes this module's traversal means the
+    same thing as the reference implementation. Flow accumulation at a cell IS
+    the count of cells draining to it, computed by pysheds through a completely
+    different algorithm, so exact agreement across many seeds is strong evidence
+    the D8 encoding is being inverted correctly.
+
+    Preferred over `grid.catchment` because accumulation is unambiguous: no
+    coordinate conversion, no pour point snapping, no boundary convention.
+    """
+    grid, fdir, fdir_arr, acc_arr = _cone_with_dimple(tmp_path)
+
+    rng = np.random.default_rng(0)
+    checked = 0
+    for _ in range(40):
+        r = int(rng.integers(1, fdir_arr.shape[0] - 1))
+        c = int(rng.integers(1, fdir_arr.shape[1] - 1))
+        if fdir_arr[r, c] not in DM:
+            continue                     # nodata cell, nothing to compare
+        mask = basins.upstream_mask(fdir_arr, r, c)
+        assert mask.sum() == acc_arr[r, c], (
+            f"seed ({r}, {c}): upstream_mask counted {mask.sum()}, "
+            f"pysheds accumulation says {acc_arr[r, c]}"
+        )
+        checked += 1
+
+    assert checked >= 30, "too few valid seeds; the test is not meaningful"
+
+
+def test_matches_pysheds_catchment_interior(tmp_path):
+    """`upstream_mask` matches `grid.catchment`, away from the grid border.
+
+    The two agree exactly on the interior. They differ on the outermost row and
+    column, where pysheds' catchment omits cells that its own accumulation
+    counts. On the test DEM that is 75 border cells, all of which do genuinely
+    drain to the seed (verified by walking the flow directions downstream), and
+    `grid.catchment` returns no cell that `upstream_mask` misses.
+
+    So this is a boundary convention in pysheds' catchment routine rather than a
+    disagreement about routing, and the comparison is restricted to the interior
+    rather than papered over. `test_matches_pysheds_accumulation` is the
+    unrestricted check.
+    """
+    grid, fdir, fdir_arr, acc_arr = _cone_with_dimple(tmp_path)
+
+    edge = np.zeros(fdir_arr.shape, dtype=bool)
+    edge[0, :] = edge[-1, :] = edge[:, 0] = edge[:, -1] = True
+    interior = ~edge
+
+    seed_acc = np.where(interior, acc_arr, 0)
+    r, c = np.unravel_index(np.argmax(seed_acc), seed_acc.shape)
 
     ours = basins.upstream_mask(fdir_arr, int(r), int(c))
-
-    x, y = grid.affine * (int(c) + 0.5, int(r) + 0.5)
-    theirs = np.asarray(grid.catchment(x=x, y=y, fdir=fdir, xytype="coordinate")).astype(bool)
+    theirs = np.asarray(
+        grid.catchment(x=int(c), y=int(r), fdir=fdir, xytype="index")
+    ).astype(bool)
 
     assert ours.sum() > 20, "seed produced a trivial catchment; test is not meaningful"
-    assert np.array_equal(ours, theirs)
+    assert np.array_equal(ours[interior], theirs[interior])
+    # pysheds must never claim a cell that we miss; only the reverse happens.
+    assert not (theirs & ~ours).any()
