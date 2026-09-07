@@ -167,14 +167,23 @@ the two pipelines agree on dNBR itself, which narrows the vegetation-versus-soil
 severity question to the moderate/high classification inside T rather than the
 dNBR measurement.
 
-Running the model on the same ground with one variable swapped at a time, from
-the USGS baseline, attributes the 6.4 mm/hr median gap:
+Running the model on the same ground with one variable swapped at a time
+attributes the 6.4 mm/hr median gap. The swaps were run in both directions,
+because the model is non-linear and shares measured from one baseline need not
+match those measured from the other:
 
-| Swapped variable | share of the gap |
-|---|---|
-| T, terrain | 46.3% |
-| S, soil | 44.0% |
-| F, burn severity | 5.7% |
+| Swapped variable | from USGS baseline | from our baseline | reported range |
+|---|---|---|---|
+| T, terrain | 46.3% | 48.0% | 46 to 48% |
+| S, soil | 44.0% | 33.9% | 34 to 44% |
+| F, burn severity | 5.7% | 15.9% | 6 to 16% |
+
+Terrain is the firm number: under 2 percentage points of spread, so it accounts
+for roughly half the gap regardless of where the measurement starts. Soil and
+severity each move by about 10 points depending on the baseline and trade against
+each other, so they are reported as ranges rather than point estimates. The
+shares sum to 96.0% one way and 97.7% the other, so interaction between the
+variables is small in both directions.
 
 Most of the soil difference sits in aggregation rather than in the data. Six
 candidate rules were computed from the same source: zeroing null KF values rather
@@ -182,21 +191,29 @@ than dropping and renormalising them moves S from 0.259 to 0.197 against the USG
 median of 0.150, closing 57% of the difference and coming closer than any other
 rule tested. That is suggestive rather than conclusive, since matching a median
 does not identify a rule and the USGS field description specifies only "mean
-catchment KF-factor". SSURGO was tested as an alternative explanation and ruled
-out: it moves S further away, not closer, with coverage verified at 1.0000 across
-all 237 basins.
+catchment KF-factor".
+
+Two alternative explanations were tested and eliminated. SSURGO moves S further
+away rather than closer, with coverage verified at 1.0000 across all 237 basins.
+And dividing by 100 rather than renormalising over the components present, which
+would matter where STATSGO component percentages fall short of 100, returns
+values identical to the zeroed rule here, because all ten map units in this fire
+sum to exactly 100.
 
 ### What is still not validated
-
-**The attribution is measured from one baseline.** The model is a logistic and its
-inverse, so shares measured by swapping away from the USGS values need not match
-shares measured by swapping away from these. The reverse swaps have not been run.
 
 **The terrain difference is confounded with basin size.** Their catchments are
 roughly five times smaller, and basin size affects T directly: a small basin sits
 on one hillslope and takes extreme values, while a larger one averages across
-ridges and gullies. The 46.3% combines delineation scale with any genuine
-difference in slope or severity classification, and those are not separated.
+ridges and gullies. The 46 to 48% combines delineation scale with any genuine
+difference in slope or severity classification, and those are not separated. This
+is the largest open item from the comparison, and running the delineation at a
+minimum area closer to the USGS median of 0.082 km² would quantify it.
+
+**A residual soil difference of 0.047 is unexplained.** Zeroing null KF values
+accounts for 57% of the soil gap and two further mechanisms have been tested and
+eliminated. Resolving the remainder would require knowledge of the `ocelote`
+implementation that the published outputs do not provide.
 
 **The USGS catchments sit below the calibration floor cited here.** Their median
 catchment is 0.082 km², while this project treats 0.1 km² as the lower bound of
