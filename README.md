@@ -12,7 +12,7 @@ After a wildfire, two things happen to a hillside. The plants that held the soil
 
 When a short, intense burst of rain hits a steep burned slope, the loose material on that slope starts moving. It picks up more material as it goes, and what reaches the canyon bottom is a fast slurry of mud, rock and burned vegetation. That is a debris flow. They kill people and destroy infrastructure, usually in the first winter after a fire, and usually from storms that would be completely unremarkable on unburned ground.
 
-The useful part is that they are predictable. Four things control whether a given canyon produces one: how steep it is, how badly it burned, how erodible the soil is, and how hard it rains. Staley et al. (2017) fitted those four things to a database of real post-fire debris flows and produced a model that works well enough to run operational warning systems in the western United States.
+The useful part is that they are predictable. Four things control whether a given canyon produces one: how steep it is, how badly it burned, how erodible the soil is, and how hard it rains. Staley and others (2017) fitted those four things to a database of real post-fire debris flows and produced a model that works well enough to run operational warning systems in the western United States.
 
 ## What this project does
 
@@ -104,17 +104,119 @@ Each of these produces a hazard map that looks completely normal and is wrong. E
 
 ## What has been validated, and what has not
 
-This distinction matters and is easy to blur, so it is stated explicitly.
+The claims here are checked in three places, and the distinction between them
+matters.
 
-**Validated.** Given identical T, F, S and R values, this project's `m1.py` produces bit for bit identical results to `pfdf.models.staley2017`, the official USGS implementation. That was checked across 1,422 forward evaluations (237 basins at 6 design storms) and 237 inverse solves. Maximum absolute difference: 0.000e+00.
+### The model implementation, against the reference package
 
-The comparison was then deliberately broken to confirm it is capable of failing. Swapping two coefficients moves the result by 1.3e-01, passing intensity where accumulation was expected moves it by 8.3e-01, and perturbing a single coefficient by 1% moves it by 4.0e-03. So the exact agreement is a real result, not a comparison that always returns zero.
+Given identical T, F, S and R values, `m1.py` produces bit for bit identical
+results to `pfdf.models.staley2017`, the official USGS implementation. That was
+checked across 1,422 forward evaluations (237 basins at 6 design storms) and 237
+inverse solves. Maximum absolute difference: 0.000e+00.
 
-The captured values are frozen in `tests/test_m1_pfdf.py`, so the agreement holds as an ordinary regression test with no network access and no pfdf installed.
+The comparison was then deliberately broken to confirm it is capable of failing.
+Swapping two coefficients moves the result by 1.3e-01, passing intensity where
+accumulation was expected moves it by 8.3e-01, and perturbing a single
+coefficient by 1% moves it by 4.0e-03. So the exact agreement is a real result,
+not a comparison that always returns zero. The captured values are frozen in
+`tests/test_m1_pfdf.py`, so the agreement holds as a regression test with no
+network access and no pfdf installed.
 
-**Not validated.** Whether this pipeline's T, F and S match what pfdf's own ingest would produce from the same rasters. The burn severity, slope, flow routing and basin delineation steps have not been compared against `pfdf.severity`, `pfdf.watershed` or `pfdf.segments`.
+### The model implementation, against USGS published output
 
-In short: **the model implementation is verified, the ingest is not.** Those are different claims. Comparing against the published USGS Bridge Fire assessment is the pipeline level check, and it is on the roadmap rather than done.
+USGS publishes T, F and S per catchment for their own Bridge Fire assessment
+(`brd2024`). Feeding their values into this project's model reproduces their
+published rainfall thresholds on all 703 pieces of burned ground to within
+floating point precision: mean difference 5.1e-15 mm/hr, maximum 4.7e-13 mm/hr,
+correlation 1.000000.
+
+This is not a stronger version of the check above. Both reproduce the same
+published equation and both would have to agree. Its value is narrower and
+specific: it confirms that this project reads USGS's published fields and units
+correctly, and that this particular assessment was run with stock M1 parameters
+rather than the modifications USGS notes operational personnel sometimes make.
+Both are prerequisites for the input comparison below.
+
+### The ingest, against an independent operational assessment
+
+The two assessments were compared on a shared 10 m grid, because their 562
+catchments (median 0.082 km²) and this project's 237 (median 0.379 km²) do not
+correspond one to one. Over the 218.7 km² both cover:
+
+| Variable | correlation | median difference (ours minus theirs) |
+|---|---|---|
+| F, burn severity | 0.965 | +0.033 |
+| T, terrain | 0.921 | +0.152 |
+| S, soil | 0.917 | +0.110 |
+| rainfall threshold | 0.877 | -5.08 mm/hr |
+
+These are computed per pixel, but values are constant within each catchment, so
+the effective sample is in the hundreds rather than the millions of pixels
+compared. They describe spatial agreement; they are not statistical tests.
+
+**The disagreement is one-directional.** Of ground USGS rates High at 24 mm/hr,
+this assessment agrees on 99.8%. Of ground this assessment rates High, USGS
+agrees on 63.9%. Only 0.2 km² out of 218.7 is High for them and not for us. The
+two agree on where the hazard is and differ on how much, with this project
+consistently more hazardous.
+
+**F agreeing is the most informative result.** Their field description defines F
+as mean catchment dNBR divided by 1000, the same quantity used here, and the two
+agree at r = 0.965 despite different imagery and entirely separate processing. So
+the two pipelines agree on dNBR itself, which narrows the vegetation-versus-soil
+severity question to the moderate/high classification inside T rather than the
+dNBR measurement.
+
+Running the model on the same ground with one variable swapped at a time, from
+the USGS baseline, attributes the 6.4 mm/hr median gap:
+
+| Swapped variable | share of the gap |
+|---|---|
+| T, terrain | 46.3% |
+| S, soil | 44.0% |
+| F, burn severity | 5.7% |
+
+Most of the soil difference sits in aggregation rather than in the data. Six
+candidate rules were computed from the same source: zeroing null KF values rather
+than dropping and renormalising them moves S from 0.259 to 0.197 against the USGS
+median of 0.150, closing 57% of the difference and coming closer than any other
+rule tested. That is suggestive rather than conclusive, since matching a median
+does not identify a rule and the USGS field description specifies only "mean
+catchment KF-factor". SSURGO was tested as an alternative explanation and ruled
+out: it moves S further away, not closer, with coverage verified at 1.0000 across
+all 237 basins.
+
+### What is still not validated
+
+**The attribution is measured from one baseline.** The model is a logistic and its
+inverse, so shares measured by swapping away from the USGS values need not match
+shares measured by swapping away from these. The reverse swaps have not been run.
+
+**The terrain difference is confounded with basin size.** Their catchments are
+roughly five times smaller, and basin size affects T directly: a small basin sits
+on one hillslope and takes extreme values, while a larger one averages across
+ridges and gullies. The 46.3% combines delineation scale with any genuine
+difference in slope or severity classification, and those are not separated.
+
+**The USGS catchments sit below the calibration floor cited here.** Their median
+catchment is 0.082 km², while this project treats 0.1 km² as the lower bound of
+the range M1 was fitted on and flags anything below it as an extrapolation. By
+that rule more than half of the USGS operational catchments would be flagged.
+Either the range is cited too strictly here or operational practice routinely
+works below it, and that is unresolved.
+
+**The reference ingest code has not been run.** `pfdf.severity`,
+`pfdf.watershed` and `pfdf.segments` were not used. The comparison is against
+published assessment output, not against the reference implementation of the
+ingest.
+
+**Their assessment is not a stock reference either.** USGS notes that operational
+personnel may modify stream network delineation and model parameters for
+individual assessments. Their perimeter is also 221.3 km² against the 226.6 km²
+used here, and their assessment date is one day before this project's post-fire
+scene, so the two necessarily used different imagery.
+
+The full comparison is in `02b_usgs_comparison.ipynb`.
 
 ## How it actually works, step by step
 
@@ -128,7 +230,7 @@ Two pictures taken 40 days apart also differ for boring reasons: sun angle, atmo
 
 So three steps run before routing. Fill the pits. Resolve the flats that filling creates, since a perfectly flat cell has no lowest neighbour either. Then assign every cell a direction to its steepest neighbour and count how many cells drain through each point.
 
-On the Bridge Fire, 0.79% of cells were altered by filling. The deepest fill was 74.7 m, which turned out to be San Gabriel Reservoir. A reservoir is a real closed depression and filling it seemed the correct course of action here.
+On the Bridge Fire, 0.79% of cells were altered by filling. The deepest fill was 74.7 m, which turned out to be San Gabriel Reservoir. A reservoir is a real closed depression and filling it is correct.
 
 **Slope comes from the raw DEM, routing from the repaired one.** This is worth stating clearly because it is easy to get backwards. Filling deliberately changes elevations, which is right for routing and wrong for measurement. Computing slope on the filled surface would report gradients invented by the fill algorithm.
 
@@ -151,6 +253,7 @@ src/debrisflow/
 tests/             151 tests across 8 files
 00_model_driver.ipynb        Colab driver: pulls this repo, runs it, shows results
 01_bridge_fire_ingest.ipynb  Colab driver: full ingest for the 2024 Bridge Fire
+02b_usgs_comparison.ipynb    comparison against the published USGS assessment
 ```
 
 Every module keeps **pure array maths** separate from **network calls**. The notebooks fetch, the tested functions compute. That split is what makes a pipeline with remote data dependencies testable at all: you cannot unit test a function that phones the internet, but you can unit test the function it hands its results to.
@@ -183,7 +286,7 @@ A wrong hazard map looks exactly like a correct one, so correctness here cannot 
 
 Slope is checked against planes whose angle is known from trigonometry. The three classic errors above each have a test that fails if reintroduced. `test_compat.py` runs real D8 flow accumulation on a generated GeoTIFF, so if pysheds ever ships a numpy 2 compatible release, deleting the shim is either immediately safe or immediately not.
 
-Basin delineation is tested on synthetic flow grids small enough to verify by hand: a 3x3 where all eight neighbours drain to the center catches a mis-encoded direction map, which would otherwise produce basins that drain the wrong way and look perfectly normal. There is also a property test on random grids checking that every labelled cell reaches its own basin's outlet before any other, a determinism test because greedy algorithms with tied sort keys silently reorder, and a cross-check against `pysheds.Grid.catchment` on a real DEM.
+Basin delineation is tested on synthetic flow grids small enough to verify by hand: a 3x3 where all eight neighbours drain to the centre catches a mis-encoded direction map, which would otherwise produce basins that drain the wrong way and look perfectly normal. There is also a property test on random grids checking that every labelled cell reaches its own basin's outlet before any other, a determinism test because greedy algorithms with tied sort keys silently reorder, and a cross-check against `pysheds.Grid.catchment` on a real DEM.
 
 The model tests are described under validation above.
 
@@ -191,11 +294,13 @@ The model tests are described under validation above.
 
 **Vegetation change is not soil burn severity.** The 270 dNBR threshold used here classifies moderate and high severity from vegetation change. M1 was calibrated against soil burn severity, which USGS maps with BAER field teams. The two correlate but are not the same, and in chaparral they diverge in a known direction: the shrubs burn completely, giving very high dNBR, while the soil underneath may only be moderately affected. The 76.5% figure reported above is therefore plausibly higher than a soil burn severity map would give. Running the threshold at 200, 270 and 350 is the planned sensitivity axis.
 
+The comparison against the USGS assessment narrows this. Their F, which is mean catchment dNBR, agrees with this project's at r = 0.965, so the two pipelines measure dNBR consistently. The open question is the classification threshold applied to it inside T, not the dNBR itself.
+
 **Basins cover 87.6% of the burn area, not all of it.** Trunk canyons with more than 8 km² of contributing area are outside the model's calibration range and cannot serve as source basins. Those unassigned valley floors are exactly where debris flows travel and where damage occurs, so the map describes where flows initiate rather than where they end up.
 
 **S barely varies.** STATSGO map units are 1 to 10 km² against a median basin of 0.38 km², so most basins sit inside a single map unit. Across the entire Bridge Fire, S spans 0.242 to 0.339. Its coefficient is the largest in the model, but with that little spread it acts closer to a constant offset than a discriminator. Almost all the between-basin variation in the results comes from T. The SSURGO pass exists to quantify whether finer soil data changes that.
 
-**The ingest is not cross-validated.** See the validation section. Only the model implementation has been checked against pfdf.
+**The ingest is compared but not fully explained.** See the validation section. It agrees with the USGS assessment on spatial pattern and on dNBR, and differs systematically on terrain and soil. The terrain difference is not separated from the basin size difference, and the soil aggregation rule is inferred from a distribution match rather than identified.
 
 **Likelihood only.** The Gartner (2014) volume model and the combined hazard classification are not implemented, so this says how likely a debris flow is, not how big.
 
@@ -206,8 +311,8 @@ The model tests are described under validation above.
 1. ~~Verify Soil Data Access connectivity and schema~~ **done**, live STATSGO output captured as a fixture
 2. ~~Real data ingest: Sentinel-2 and 3DEP for the 2024 Bridge Fire~~ **done**
 3. ~~Cross-validate the model against the official USGS `pfdf` package~~ **done**, exact agreement, pinned as a test
-4. Sensitivity analysis: which basins are High under *every* assumption, and which flip depending on dNBR threshold, basin delineation and soil dataset. USGS publishes single scenario assessments without uncertainty bounds, so this is the genuinely additional piece
-5. Compare against the published USGS Bridge Fire assessment, which is the pipeline level validation the model comparison does not provide
+4. ~~Compare against the published USGS Bridge Fire assessment~~ **done**, see `02b_usgs_comparison.ipynb`
+5. Sensitivity analysis: which basins are High under *every* assumption, and which flip depending on dNBR threshold, basin delineation and soil dataset. USGS publishes single scenario assessments without uncertainty bounds, so this is the genuinely additional piece
 6. Delivery: tippecanoe to PMTiles, COGs on Cloudflare R2, MapLibre GL JS front end
 
 ## References and attribution
