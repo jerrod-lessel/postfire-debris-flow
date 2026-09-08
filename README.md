@@ -2,7 +2,7 @@
 
 Working out which burned canyons will produce debris flows, and how hard it has to rain to set them off.
 
-**Status:** complete pipeline, run end to end on the 2024 Bridge Fire. Model implementation cross-validated against the official USGS package. 151 tests passing.
+**Status:** complete pipeline, run end to end on the 2024 Bridge Fire. Model implementation cross-validated against the official USGS package. 184 tests passing.
 
 ---
 
@@ -70,6 +70,21 @@ The Bridge Fire burned about 56,000 acres of the San Gabriel Mountains northeast
 Median basin needs **16.4 mm/hr** of 15 minute rainfall to reach a 50% chance of a debris flow. The range across basins runs from 11.4 to 84.5 mm/hr. Low numbers mean dangerous: those basins need very little rain.
 
 For context, 16 mm/hr over 15 minutes is not a remarkable storm in southern California. It is the kind of short burst an ordinary winter atmospheric river delivers.
+
+**How much does that depend on the assumptions?** Running the pipeline across
+three dNBR severity thresholds and two soil aggregation rules, the median basin's
+threshold sits between 16.2 and 17.9 mm/hr, a spread of 1.70 mm/hr. Only 17 of
+237 basins change hazard class. Against a 7.7 mm/hr disagreement with the USGS
+operational assessment, parameter choice contributes roughly a fifth of what
+data-source choice does.
+
+Substituting the BAER field-validated soil burn severity map instead of a dNBR
+threshold puts 87 of 237 basins above the parameter envelope and none below it,
+so the envelope understates the real uncertainty. Every basin the parameter sweep
+rates never-High is confirmed not High by field observation, under both soil
+rules, with no exceptions. The disagreements run one way: this pipeline
+over-warns relative to ground truth and, on this fire, does not under-warn. Full
+analysis in `04_sensitivity.ipynb`.
 
 ## The model
 
@@ -305,11 +320,12 @@ src/debrisflow/
     basins.py      D8 catchment traversal and basin delineation
     soils.py       KF-factor aggregation, Soil Data Access, gives S
     _compat.py     numpy 2 shim for pysheds
-tests/             151 tests across 8 files
+tests/             184 tests across 9 files
 00_model_driver.ipynb        Colab driver: pulls this repo, runs it, shows results
 01_bridge_fire_ingest.ipynb  Colab driver: full ingest for the 2024 Bridge Fire
 02b_usgs_comparison.ipynb    comparison against the published USGS assessment
 03_sensitivity_delineation.ipynb  delineation scale and USGS input substitution
+04_sensitivity.ipynb              parameter sensitivity and BAER anchors
 ```
 
 Every module keeps **pure array maths** separate from **network calls**. The notebooks fetch, the tested functions compute. That split is what makes a pipeline with remote data dependencies testable at all: you cannot unit test a function that phones the internet, but you can unit test the function it hands its results to.
@@ -335,7 +351,7 @@ Note that the STATSGO spatial data lives in the `gsmmupolygon` table. The conven
 ## Testing
 
 ```bash
-python -m pytest -q          # 151 passed
+python -m pytest -q          # 184 passed
 ```
 
 A wrong hazard map looks exactly like a correct one, so correctness here cannot be established by looking at it. The tests are built around that.
@@ -343,6 +359,15 @@ A wrong hazard map looks exactly like a correct one, so correctness here cannot 
 Slope is checked against planes whose angle is known from trigonometry. The three classic errors above each have a test that fails if reintroduced. `test_compat.py` runs real D8 flow accumulation on a generated GeoTIFF, so if pysheds ever ships a numpy 2 compatible release, deleting the shim is either immediately safe or immediately not.
 
 Basin delineation is tested on synthetic flow grids small enough to verify by hand: a 3x3 where all eight neighbours drain to the centre catches a mis-encoded direction map, which would otherwise produce basins that drain the wrong way and look perfectly normal. There is also a property test on random grids checking that every labelled cell reaches its own basin's outlet before any other, a determinism test because greedy algorithms with tied sort keys silently reorder, and a cross-check against `pysheds.Grid.catchment` on a real DEM.
+
+`sensitivity.py` is tested on hand-built frames small enough to verify by eye.
+Two tests pin the High cutoff specifically: one confirms a basin at p = 0.55 comes
+out never-High rather than High, and one confirms p = 0.60 exactly counts as High.
+Another asserts F is constant per basin across runs, because F not varying with
+the severity threshold is a load-bearing property of that study's design, and a
+frame where it varies was assembled wrongly. `anchor_agreement` refuses to run if
+an anchor run appears in the envelope list, so the structural mistake that would
+quietly widen the envelope is prevented by the code rather than by remembering.
 
 The model tests are described under validation above.
 
@@ -362,7 +387,7 @@ The comparison also narrows what is at issue. Their F, which is mean catchment d
 
 **Likelihood only.** The Gartner (2014) volume model and the combined hazard classification are not implemented, so this says how likely a debris flow is, not how big.
 
-**Single fire, single scene pair.** Everything here has been run on one fire with one pre and post scene. Scene choice is a sensitivity axis that has not been exercised.
+**Single fire, single scene pair.** Everything here has been run on one fire with one pre and post scene. Scene choice is a sensitivity axis that has not been exercised, and the direction of the conservative bias found against BAER cannot be generalised from a single case. Chaparral is where vegetation dNBR and soil burn severity diverge most, so the effect is plausibly smaller in forested fuels.
 
 **Basin coverage of the burn depends on delineation scale.** The headline 87.6% figure is for the 0.1 km² minimum. At 0.02 km² it rises to 93.7%, because fewer trunk channels exceed the 8 km² ceiling. The uncovered ground is a consequence of the scale chosen rather than a fixed property of the method.
 
@@ -373,7 +398,7 @@ The comparison also narrows what is at issue. Their F, which is mean catchment d
 3. ~~Cross-validate the model against the official USGS `pfdf` package~~ **done**, exact agreement, pinned as a test
 4. ~~Compare against the published USGS Bridge Fire assessment~~ **done**, see `02b_usgs_comparison.ipynb`
 5. ~~Delineation scale sensitivity and substitution of the published USGS inputs~~ **done**, see `03_sensitivity_delineation.ipynb`
-6. Sensitivity analysis: which basins are High under *every* assumption, and which flip depending on dNBR threshold and soil rule. USGS publishes single scenario assessments without uncertainty bounds, so this is the genuinely additional piece
+6. ~~Sensitivity analysis: which basins are High under every assumption, and which flip~~ **done**, see `04_sensitivity.ipynb`. 140 basins are High under all six parameter combinations, 17 flip, 80 never are. Median threshold spread 1.70 mm/hr
 7. Delivery: tippecanoe to PMTiles, COGs on Cloudflare R2, MapLibre GL JS front end
 
 ## References and attribution
