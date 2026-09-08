@@ -200,15 +200,53 @@ would matter where STATSGO component percentages fall short of 100, returns
 values identical to the zeroed rule here, because all ten map units in this fire
 sum to exactly 100.
 
+### Substituting the USGS inputs directly
+
+USGS documentation defines their terrain variable as the proportion of upslope
+area in BARC class 3 or 4 with gradients at or above 23 degrees. Those classes
+come from a field-validated soil burn severity map, not a fixed dNBR threshold:
+BAER teams set the class breaks per fire and hand-correct individual areas from
+field observation. For the Bridge Fire, BAER published the result as 51% moderate
+and 7% high, so 58% moderate-or-high, against the 76.5% this project's dNBR >= 270
+classification produces.
+
+That published raster was downloaded and verified against its own published class
+proportions (51.1% and 6.9% measured, within 0.2 points) before use, then
+substituted for this project's severity mask with everything else held fixed.
+
+| Run | area-weighted T | area-weighted S | threshold | gap closed |
+|---|---|---|---|---|
+| this project's inputs | 0.670 | 0.254 | 18.11 mm/hr | - |
+| BAER severity substituted | 0.471 | 0.254 | 19.95 mm/hr | 24% |
+| zeroed soil rule | 0.670 | 0.183 | 19.57 mm/hr | 19% |
+| both substituted | 0.471 | 0.183 | 21.69 mm/hr | 47% |
+| USGS published | 0.376 | 0.144 | 25.80 mm/hr | - |
+
+Delineation scale was also tested and contributes nothing. The pipeline was run
+at four minimum basin areas from 0.02 to 0.5 km². The 0.02 km² run matches the
+threshold USGS documents for their own drainage networks and produced 566 basins
+at a median of 0.070 km², against their 562 at 0.082 km². Across that 25-fold
+range of minimum area, the area-weighted T moves by 0.05 and the threshold by
+0.35 mm/hr, in the opposite direction to the one that would close the gap.
+
+The full analysis is in `03_sensitivity_delineation.ipynb`.
+
 ### What is still not validated
 
-**The terrain difference is confounded with basin size.** Their catchments are
-roughly five times smaller, and basin size affects T directly: a small basin sits
-on one hillslope and takes extreme values, while a larger one averages across
-ridges and gullies. The 46 to 48% combines delineation scale with any genuine
-difference in slope or severity classification, and those are not separated. This
-is the largest open item from the comparison, and running the delineation at a
-minimum area closer to the USGS median of 0.082 km² would quantify it.
+**A residual of 4.11 mm/hr, about half the original gap, is unexplained and sits
+in the terrain variable.** Using the USGS field-validated severity map at the USGS
+delineation scale, T is 0.471 against their 0.376, still 25% higher. Delineation
+scale has been ruled out and severity classification accounts for part of it, so
+something else in the terrain step differs. The leading untested hypothesis is
+that "upslope area" in the USGS definition refers to the drainage network above a
+stream segment rather than to a catchment polygon, which need not be the same
+region even when the areas are comparable.
+
+**The soil substitution is fitted, not verified.** The zeroed null rule was chosen
+because it came closest to the USGS values among six candidates tested, so
+reporting it as an explanation carries that circularity. The severity
+substitution does not: the BAER raster is the actual published input and was
+checked against its own published class proportions before use.
 
 **A residual soil difference of 0.047 is unexplained.** Zeroing null KF values
 accounts for 57% of the soil gap and two further mechanisms have been tested and
@@ -271,6 +309,7 @@ tests/             151 tests across 8 files
 00_model_driver.ipynb        Colab driver: pulls this repo, runs it, shows results
 01_bridge_fire_ingest.ipynb  Colab driver: full ingest for the 2024 Bridge Fire
 02b_usgs_comparison.ipynb    comparison against the published USGS assessment
+03_sensitivity_delineation.ipynb  delineation scale and USGS input substitution
 ```
 
 Every module keeps **pure array maths** separate from **network calls**. The notebooks fetch, the tested functions compute. That split is what makes a pipeline with remote data dependencies testable at all: you cannot unit test a function that phones the internet, but you can unit test the function it hands its results to.
@@ -311,7 +350,9 @@ The model tests are described under validation above.
 
 **Vegetation change is not soil burn severity.** The 270 dNBR threshold used here classifies moderate and high severity from vegetation change. M1 was calibrated against soil burn severity, which USGS maps with BAER field teams. The two correlate but are not the same, and in chaparral they diverge in a known direction: the shrubs burn completely, giving very high dNBR, while the soil underneath may only be moderately affected. The 76.5% figure reported above is therefore plausibly higher than a soil burn severity map would give. Running the threshold at 200, 270 and 350 is the planned sensitivity axis.
 
-The comparison against the USGS assessment narrows this. Their F, which is mean catchment dNBR, agrees with this project's at r = 0.965, so the two pipelines measure dNBR consistently. The open question is the classification threshold applied to it inside T, not the dNBR itself.
+This has now been measured rather than predicted. BAER published the field-validated soil burn severity for this fire as 51% moderate and 7% high, so 58% moderate-or-high, against the 76.5% produced here. Substituting their raster drops the terrain variable from 0.670 to 0.471 and closes 24% of the difference with the USGS assessment. The overstatement is slope-independent, and it is largest in moderately burned basins: where the fire burned hardest, satellite dNBR and field soil severity agree, and where it burned patchily they diverge.
+
+The comparison also narrows what is at issue. Their F, which is mean catchment dNBR, agrees with this project's at r = 0.965, so the two pipelines measure dNBR consistently. The gap is in the classification applied to it, not in the measurement.
 
 **Basins cover 87.6% of the burn area, not all of it.** Trunk canyons with more than 8 km² of contributing area are outside the model's calibration range and cannot serve as source basins. Those unassigned valley floors are exactly where debris flows travel and where damage occurs, so the map describes where flows initiate rather than where they end up.
 
@@ -323,14 +364,17 @@ The comparison against the USGS assessment narrows this. Their F, which is mean 
 
 **Single fire, single scene pair.** Everything here has been run on one fire with one pre and post scene. Scene choice is a sensitivity axis that has not been exercised.
 
+**Basin coverage of the burn depends on delineation scale.** The headline 87.6% figure is for the 0.1 km² minimum. At 0.02 km² it rises to 93.7%, because fewer trunk channels exceed the 8 km² ceiling. The uncovered ground is a consequence of the scale chosen rather than a fixed property of the method.
+
 ## Roadmap
 
 1. ~~Verify Soil Data Access connectivity and schema~~ **done**, live STATSGO output captured as a fixture
 2. ~~Real data ingest: Sentinel-2 and 3DEP for the 2024 Bridge Fire~~ **done**
 3. ~~Cross-validate the model against the official USGS `pfdf` package~~ **done**, exact agreement, pinned as a test
 4. ~~Compare against the published USGS Bridge Fire assessment~~ **done**, see `02b_usgs_comparison.ipynb`
-5. Sensitivity analysis: which basins are High under *every* assumption, and which flip depending on dNBR threshold, basin delineation and soil dataset. USGS publishes single scenario assessments without uncertainty bounds, so this is the genuinely additional piece
-6. Delivery: tippecanoe to PMTiles, COGs on Cloudflare R2, MapLibre GL JS front end
+5. ~~Delineation scale sensitivity and substitution of the published USGS inputs~~ **done**, see `03_sensitivity_delineation.ipynb`
+6. Sensitivity analysis: which basins are High under *every* assumption, and which flip depending on dNBR threshold and soil rule. USGS publishes single scenario assessments without uncertainty bounds, so this is the genuinely additional piece
+7. Delivery: tippecanoe to PMTiles, COGs on Cloudflare R2, MapLibre GL JS front end
 
 ## References and attribution
 
@@ -341,6 +385,7 @@ The comparison against the USGS assessment narrows this. Their F, which is mean 
 - USGS 3DEP 1/3 arc-second elevation
 - USDA NRCS Soil Data Access, STATSGO2
 - CAL FIRE FRAP historic fire perimeters
+- USDA Forest Service BAER Soil Burn Severity Classification, national mosaic, used to substitute the field-validated severity input for the Bridge Fire
 
 ## Setup
 
