@@ -28,7 +28,8 @@ const VIEW_NOTES = {
     "combinations of severity threshold and soil rule.",
 };
 
-const state = { view: "threshold", manifest: null, fire: null, hovered: null };
+const state = { view: "threshold", manifest: null, fire: null,
+                hovered: null, locked: null };
 
 const map = new maplibregl.Map({
   container: "map",
@@ -129,10 +130,11 @@ function drawLegend() {
 const fmt = (v, d = 1) =>
   v === null || v === undefined || Number.isNaN(v) ? "n/a" : Number(v).toFixed(d);
 
-function showBasin(props) {
+function showBasin(props, locked = false) {
   const el = document.getElementById("readout");
   if (!props) {
-    el.innerHTML = `<p class="empty">Point at a basin to see its numbers.</p>`;
+    el.innerHTML = `<p class="empty">Point at a basin to see its numbers. ` +
+      `Click to keep it on screen.</p>`;
     return;
   }
   const thr = props.threshold_mm_hr;
@@ -146,7 +148,12 @@ function showBasin(props) {
       : "";
 
   el.innerHTML = `
-    <h2>Basin ${props.id}</h2>
+    <h2>
+      Basin ${props.id}
+      ${locked
+        ? `<button class="unlock" id="unlockBtn" title="Press Escape to release">pinned, release</button>`
+        : `<span class="hint">click to pin</span>`}
+    </h2>
     <div class="big">${fmt(thr)}<span>mm/hr</span></div>
     <p class="range">${range}</p>
     <dl class="rows">
@@ -164,6 +171,8 @@ function showBasin(props) {
 
 async function loadFire(fire) {
   state.fire = fire;
+  state.locked = null;
+  state.hovered = null;
 
   const res = await fetch(fire.data);
   if (!res.ok) throw new Error(`Could not load ${fire.data} (${res.status})`);
@@ -204,19 +213,29 @@ async function loadFire(fire) {
   applyView();
 }
 
-function wireInteraction() {
-  const setHover = (id) => {
-    if (state.hovered !== null) {
-      map.setFeatureState({ source: "basins", id: state.hovered }, { hover: false });
-    }
-    state.hovered = id;
-    if (id !== null) {
-      map.setFeatureState({ source: "basins", id }, { hover: true });
-    }
-  };
+function setHover(id) {
+  if (state.hovered !== null && state.hovered !== state.locked) {
+    map.setFeatureState({ source: "basins", id: state.hovered }, { hover: false });
+  }
+  state.hovered = id;
+  if (id !== null) {
+    map.setFeatureState({ source: "basins", id }, { hover: true });
+  }
+}
 
+function unpin() {
+  if (state.locked !== null) {
+    map.setFeatureState({ source: "basins", id: state.locked }, { hover: false });
+  }
+  state.locked = null;
+  showBasin(null);
+}
+
+function wireInteraction() {
+  // Hover is a preview. A click pins the basin so the panel can be read and
+  // scrolled without the pointer wandering onto a neighbour and swapping it out.
   map.on("mousemove", "basins-fill", (e) => {
-    if (!e.features.length) return;
+    if (state.locked !== null || !e.features.length) return;
     const f = e.features[0];
     setHover(f.id);
     showBasin(f.properties);
@@ -224,13 +243,33 @@ function wireInteraction() {
   });
 
   map.on("mouseleave", "basins-fill", () => {
+    if (state.locked !== null) return;
     setHover(null);
     map.getCanvas().style.cursor = "";
   });
 
-  // Touch devices have no hover, so a tap does the same job.
   map.on("click", "basins-fill", (e) => {
-    if (e.features.length) showBasin(e.features[0].properties);
+    if (!e.features.length) return;
+    const f = e.features[0];
+    if (state.locked === f.id) { unpin(); return; }   // click again to release
+    if (state.locked !== null) {
+      map.setFeatureState({ source: "basins", id: state.locked }, { hover: false });
+    }
+    state.locked = f.id;
+    setHover(f.id);
+    showBasin(f.properties, true);
+  });
+
+  // Clicking bare map releases the pin, as does Escape.
+  map.on("click", (e) => {
+    const hits = map.queryRenderedFeatures(e.point, { layers: ["basins-fill"] });
+    if (!hits.length) unpin();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") unpin();
+  });
+  document.getElementById("readout").addEventListener("click", (e) => {
+    if (e.target.id === "unlockBtn") unpin();
   });
 }
 
