@@ -1,1 +1,158 @@
+:root {
+  /* Cool deep slate, so the warm end of the hazard ramp carries the heat. */
+  --bg:        #0e151b;
+  --panel:     #16202a;
+  --panel-hi:  #1e2c38;
+  --line:      #2a3b48;
+  --ink:       #e6edf2;
+  --ink-dim:   #93a7b5;
 
+  /* Threshold ramp: hot means little rain needed, so dangerous. */
+  --t1: #ff4f2b;   /* under 14 mm/hr */
+  --t2: #ff8a3d;   /* 14 to 18 */
+  --t3: #ffc857;   /* 18 to 24 */
+  --t4: #6d93a8;   /* 24 to 40 */
+  --t5: #3a5567;   /* over 40 */
+
+  --always:    #ff4f2b;
+  --sometimes: #ffc857;
+  --never:     #3a5567;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; height: 100%;
+  background: var(--bg); color: var(--ink);
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+}
+
+#map { position: absolute; inset: 0; }
+
+/* ---- Title -------------------------------------------------------------- */
+.titlebar {
+  position: absolute; top: 0; left: 0; right: 0;
+  padding: 22px 26px 34px;
+  background: linear-gradient(to bottom, rgba(14,21,27,.92), rgba(14,21,27,0));
+  pointer-events: none; z-index: 2;
+}
+.titlebar h1 {
+  font-family: Fraunces, Georgia, serif;
+  font-weight: 300; font-size: clamp(1.35rem, 3.4vw, 2.1rem);
+  letter-spacing: -.01em; margin: 0; line-height: 1.1;
+}
+.titlebar .sub {
+  margin: .35rem 0 0; color: var(--ink-dim);
+  font-size: .78rem; letter-spacing: .01em;
+}
+
+/* ---- Panel -------------------------------------------------------------- */
+.panel {
+  position: absolute; z-index: 3;
+  top: 96px; left: 26px; width: 316px; max-height: calc(100% - 130px);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 3px;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.panel-toggle {
+  display: none; width: 100%; padding: 10px;
+  background: var(--panel-hi); color: var(--ink-dim);
+  border: 0; border-bottom: 1px solid var(--line);
+  font: inherit; font-size: .72rem; cursor: pointer;
+}
+.panel-body { overflow-y: auto; padding: 18px; }
+
+.field { margin-bottom: 20px; }
+.field label {
+  display: block; font-size: .68rem; color: var(--ink-dim);
+  margin-bottom: 7px; letter-spacing: .02em;
+}
+select {
+  width: 100%; padding: 9px 10px;
+  background: var(--panel-hi); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 2px;
+  font: inherit; font-size: .8rem;
+}
+.meta {
+  margin: 7px 0 0; font-size: .68rem; color: var(--ink-dim); line-height: 1.5;
+}
+
+.segmented { display: flex; gap: 5px; }
+.segmented button {
+  flex: 1; padding: 8px 6px;
+  background: var(--panel-hi); color: var(--ink-dim);
+  border: 1px solid var(--line); border-radius: 2px;
+  font: inherit; font-size: .72rem; cursor: pointer;
+  transition: color .12s, border-color .12s;
+}
+.segmented button.on { color: var(--ink); border-color: #4a6b80; }
+
+/* ---- Legend ------------------------------------------------------------- */
+.legend { margin-bottom: 20px; }
+.legend-row {
+  display: flex; align-items: center; gap: 9px;
+  font-size: .7rem; color: var(--ink-dim); padding: 2.5px 0;
+}
+.legend-row i {
+  width: 15px; height: 11px; border-radius: 1px; flex: none;
+}
+.legend-caption {
+  font-size: .66rem; color: var(--ink-dim);
+  margin: 9px 0 0; line-height: 1.5;
+}
+
+/* ---- Basin readout ------------------------------------------------------ */
+.readout {
+  border-top: 1px solid var(--line); padding-top: 15px; min-height: 140px;
+}
+.readout .empty { color: var(--ink-dim); font-size: .72rem; margin: 0; }
+.readout h2 {
+  font-family: "DM Mono", monospace; font-weight: 400;
+  font-size: .7rem; color: var(--ink-dim); margin: 0 0 10px;
+}
+.big {
+  font-family: Fraunces, Georgia, serif; font-weight: 300;
+  font-size: 2.6rem; line-height: 1; letter-spacing: -.02em;
+}
+.big span { font-size: .8rem; color: var(--ink-dim); margin-left: 5px; }
+.range { font-size: .7rem; color: var(--ink-dim); margin: 7px 0 13px; }
+.rows { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; font-size: .7rem; }
+.rows dt { color: var(--ink-dim); }
+.rows dd { margin: 0; text-align: right; }
+
+/* ---- About -------------------------------------------------------------- */
+.about { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 14px; }
+.about summary {
+  font-size: .7rem; color: var(--ink-dim); cursor: pointer; list-style: none;
+}
+.about summary::-webkit-details-marker { display: none; }
+.about summary::before { content: "+ "; }
+.about[open] summary::before { content: "- "; }
+.about p {
+  font-size: .68rem; color: var(--ink-dim); line-height: 1.65; margin: 11px 0 0;
+}
+.about a { color: #8fb6cc; }
+
+/* ---- Map chrome --------------------------------------------------------- */
+.maplibregl-ctrl-attrib {
+  background: rgba(14,21,27,.82) !important;
+  font-size: 10px !important;
+}
+.maplibregl-ctrl-attrib a { color: var(--ink-dim) !important; }
+
+:focus-visible { outline: 2px solid #7fb0cc; outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .panel {
+    top: auto; bottom: 0; left: 0; right: 0; width: auto;
+    max-height: 62%; border-radius: 0; border-left: 0; border-right: 0;
+  }
+  .panel-toggle { display: block; }
+  .panel.collapsed .panel-body { display: none; }
+  .titlebar { padding: 16px 18px 26px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
