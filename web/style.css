@@ -110,7 +110,15 @@ select {
 .readout h2 {
   font-family: "DM Mono", monospace; font-weight: 400;
   font-size: .7rem; color: var(--ink-dim); margin: 0 0 10px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
 }
+.readout .hint { font-size: .62rem; color: #6b8091; }
+.unlock {
+  background: none; border: 1px solid var(--line); border-radius: 2px;
+  color: var(--t3); font: inherit; font-size: .62rem;
+  padding: 2px 7px; cursor: pointer;
+}
+.unlock:hover { border-color: var(--t3); }
 .big {
   font-family: Fraunces, Georgia, serif; font-weight: 300;
   font-size: 2.6rem; line-height: 1; letter-spacing: -.02em;
@@ -135,6 +143,10 @@ select {
 .about a { color: #8fb6cc; }
 
 /* ---- Map chrome --------------------------------------------------------- */
+/* The title gradient runs about 90px down the page, so the zoom control starts
+   below it rather than having its top button half-swallowed. */
+.maplibregl-ctrl-top-right { margin-top: 96px; }
+
 .maplibregl-ctrl-attrib {
   background: rgba(14,21,27,.82) !important;
   font-size: 10px !important;
@@ -144,6 +156,7 @@ select {
 :focus-visible { outline: 2px solid #7fb0cc; outline-offset: 2px; }
 
 @media (max-width: 720px) {
+  .maplibregl-ctrl-top-right { margin-top: 78px; }
   .panel {
     top: auto; bottom: 0; left: 0; right: 0; width: auto;
     max-height: 62%; border-radius: 0; border-left: 0; border-right: 0;
