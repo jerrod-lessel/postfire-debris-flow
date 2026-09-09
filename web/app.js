@@ -34,26 +34,34 @@ const map = new maplibregl.Map({
   container: "map",
   style: {
     version: 8,
+    // Esri's ArcGIS Online basemaps need no key. The dark canvas keeps the
+    // hazard ramp as the only saturated thing on the page, and the hillshade
+    // under it shows the terrain the whole model is about.
     sources: {
       base: {
         type: "raster",
-        tiles: ["https://basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}@2x.png"],
+        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"],
         tileSize: 256,
-        attribution:
-          '&copy; <a href="https://carto.com/attributions">CARTO</a>, ' +
-          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxzoom: 16,
+        attribution: 'Basemap &copy; <a href="https://www.esri.com/">Esri</a>',
       },
       hillshade: {
         type: "raster",
         tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}"],
         tileSize: 256,
-        attribution: "Hillshade: Esri",
+        maxzoom: 16,
+      },
+      labels: {
+        type: "raster",
+        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"],
+        tileSize: 256,
+        maxzoom: 16,
       },
     },
     layers: [
       { id: "base", type: "raster", source: "base" },
       { id: "hillshade", type: "raster", source: "hillshade",
-        paint: { "raster-opacity": 0.35 } },
+        paint: { "raster-opacity": 0.4 } },
     ],
   },
   center: [-117.71, 34.3],
@@ -177,6 +185,10 @@ async function loadFire(fire) {
     map.addLayer({
       id: "basins-line", type: "line", source: "basins",
       paint: { "line-color": "#0e151b", "line-width": 0.6, "line-opacity": 0.7 },
+    });
+    map.addLayer({
+      id: "labels", type: "raster", source: "labels",
+      paint: { "raster-opacity": 0.85 },
     });
     wireInteraction();
   }
