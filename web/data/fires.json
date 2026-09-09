@@ -1,17 +1,34 @@
 {
-  "fires": [{
-    "id": "bridge_2024",
-    "name": "Bridge Fire",
-    "year": 2024,
-    "state": "CA",
-    "ignition": "2024-09-08",
-    "area_km2": 226.6,
-    "center": [-117.71, 34.30],
-    "bounds": [-117.80, 34.20, -117.62, 34.42],
-    "basins": 237,
-    "data": "data/bridge_2024.geojson",
-    "severity_source": "Sentinel-2 dNBR",
-    "has_baer_anchor": true,
-    "median_threshold_mm_hr": 16.4
-  }]
+  "generated": "2026-09-09",
+  "fires": [
+    {
+      "id": "bridge_2024",
+      "name": "Bridge Fire",
+      "year": 2024,
+      "state": "CA",
+      "ignition": "2024-09-08",
+      "area_km2": 226.6,
+      "center": [
+        -117.7118,
+        34.3085
+      ],
+      "bounds": [
+        -117.8155,
+        34.1828,
+        -117.601,
+        34.44
+      ],
+      "basins": 237,
+      "data": "data/bridge_2024.geojson",
+      "severity_source": "Sentinel-2 dNBR, 2024-08-20 to 2024-09-29",
+      "has_baer_anchor": true,
+      "median_threshold_mm_hr": 16.4,
+      "envelope_spread_mm_hr": 1.7,
+      "stability": {
+        "always": 140,
+        "never": 80,
+        "sometimes": 17
+      }
+    }
+  ]
 }
