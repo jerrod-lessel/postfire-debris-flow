@@ -1,0 +1,17 @@
+{
+  "fires": [{
+    "id": "bridge_2024",
+    "name": "Bridge Fire",
+    "year": 2024,
+    "state": "CA",
+    "ignition": "2024-09-08",
+    "area_km2": 226.6,
+    "center": [-117.71, 34.30],
+    "bounds": [-117.80, 34.20, -117.62, 34.42],
+    "basins": 237,
+    "data": "data/bridge_2024.geojson",
+    "severity_source": "Sentinel-2 dNBR",
+    "has_baer_anchor": true,
+    "median_threshold_mm_hr": 16.4
+  }]
+}
