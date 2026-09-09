@@ -1,1 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Post-fire debris flow hazard</title>
+<meta name="description" content="How hard it has to rain before a burned canyon produces a debris flow. Sentinel-2, 3DEP and STATSGO through the USGS M1 model.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet">
+<link href="style.css" rel="stylesheet">
+</head>
+<body>
 
+<div id="map" role="application" aria-label="Map of debris flow hazard by drainage basin"></div>
+
+<header class="titlebar">
+  <h1>Post-fire debris flow hazard</h1>
+  <p class="sub">How hard it has to rain before a burned canyon lets go</p>
+</header>
+
+<aside class="panel" id="panel">
+  <button class="panel-toggle" id="panelToggle" aria-expanded="true" aria-controls="panelBody">
+    <span id="panelToggleLabel">Hide</span>
+  </button>
+
+  <div class="panel-body" id="panelBody">
+
+    <div class="field">
+      <label for="fireSelect">Fire</label>
+      <select id="fireSelect"></select>
+      <p class="meta" id="fireMeta"></p>
+    </div>
+
+    <div class="field">
+      <label id="viewLabel">Showing</label>
+      <div class="segmented" role="radiogroup" aria-labelledby="viewLabel">
+        <button role="radio" aria-checked="true" data-view="threshold" class="on">Rainfall needed</button>
+        <button role="radio" aria-checked="false" data-view="stability">Certainty</button>
+      </div>
+      <p class="meta" id="viewNote"></p>
+    </div>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="readout" id="readout" aria-live="polite">
+      <p class="empty">Point at a basin to see its numbers.</p>
+    </div>
+
+    <details class="about">
+      <summary>How this was made</summary>
+      <p>Sentinel-2 imagery gives burn severity, a 10 m USGS elevation model gives
+      slope and drainage, and the USDA soil survey gives erodibility. Those three
+      feed the USGS M1 model, which returns the rainfall each basin needs for a
+      50% chance of producing a debris flow.</p>
+      <p>The model implementation matches the official USGS package exactly, and
+      reproduces the published USGS assessment for this fire to floating point
+      precision when given their inputs. Compared against a field-validated soil
+      burn severity map, this pipeline runs conservative: it over-warns rather
+      than under-warns, on this fire.</p>
+      <p><a href="https://github.com/jerrod-lessel/postfire-debris-flow">Code and
+      full method</a></p>
+    </details>
+
+  </div>
+</aside>
+
+<script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
