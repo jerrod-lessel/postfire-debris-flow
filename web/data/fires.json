@@ -32,7 +32,7 @@
     },
     {
       "id": "line_2024",
-      "name": "Line",
+      "name": "Line Fire",
       "year": 2024,
       "state": "CA",
       "ignition": "2024-09-05",
@@ -49,7 +49,7 @@
       ],
       "basins": 171,
       "data": "data/line_2024.geojson",
-      "severity_source": "Sentinel-2 dNBR",
+      "severity_source": "Sentinel-2 dNBR, 2024-08-20 to 2024-10-19",
       "has_baer_anchor": true,
       "median_threshold_mm_hr": 19.0,
       "envelope_spread_mm_hr": 2.23,
