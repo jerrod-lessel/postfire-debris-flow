@@ -2,7 +2,7 @@
 
 **How hard it has to rain before a burned canyon lets go.**
 
-### [Open the map](https://postfire-debris-flow.pages.dev/)
+### [Open the map](https://scar-threshold.pages.dev/)
 
 [![Scar Threshold, debris flow hazard for the 2024 Bridge Fire](web/screenshot.png)](https://scar-threshold.pages.dev/)
 
