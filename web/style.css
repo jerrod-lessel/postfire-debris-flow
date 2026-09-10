@@ -145,7 +145,7 @@ select {
 /* ---- Map chrome --------------------------------------------------------- */
 /* The title gradient runs about 90px down the page, so the zoom control starts
    below it rather than having its top button half-swallowed. */
-.maplibregl-ctrl-top-right { margin-top: 60px; }
+.maplibregl-ctrl-top-right { margin-top: 50px; }
 
 .maplibregl-ctrl-attrib {
   background: rgba(14,21,27,.82) !important;
