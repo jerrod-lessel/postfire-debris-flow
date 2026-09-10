@@ -40,8 +40,8 @@ html, body {
 }
 .titlebar h1 {
   font-family: Fraunces, Georgia, serif;
-  font-weight: 300; font-size: clamp(1.35rem, 3.4vw, 2.1rem);
-  letter-spacing: -.01em; margin: 0; line-height: 1.1;
+  font-weight: 300; font-size: clamp(1.6rem, 4vw, 2.6rem);
+  letter-spacing: -.015em; margin: 0; line-height: 1;
 }
 .titlebar .sub {
   margin: .35rem 0 0; color: var(--ink-dim);
@@ -145,7 +145,7 @@ select {
 /* ---- Map chrome --------------------------------------------------------- */
 /* The title gradient runs about 90px down the page, so the zoom control starts
    below it rather than having its top button half-swallowed. */
-.maplibregl-ctrl-top-right { margin-top: 96px; }
+.maplibregl-ctrl-top-right { margin-top: 70px; }
 
 .maplibregl-ctrl-attrib {
   background: rgba(14,21,27,.82) !important;
