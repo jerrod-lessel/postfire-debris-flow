@@ -4,7 +4,7 @@
 
 ### [Open the map](https://postfire-debris-flow.pages.dev/)
 
-[![Scar Threshold, debris flow hazard for the 2024 Bridge Fire](web/screenshot.png)](https://postfire-debris-flow.pages.dev/)
+[![Scar Threshold, debris flow hazard for the 2024 Bridge Fire](web/screenshot.png)](https://scar-threshold.pages.dev/)
 
 ---
 
