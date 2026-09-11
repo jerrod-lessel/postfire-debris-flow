@@ -162,7 +162,28 @@ This is a logistic regression. The first line adds up four weighted terms to get
 | **R** | How much rain falls, in mm, over 15 minutes | You choose the design storm |
 | **B, Ct, Cf, Cs** | Fitted constants from the paper | -3.63, 0.41, 0.67, 0.70 |
 
-Basins are classed Low (P below 0.2), Moderate (0.2 to 0.6) and High (0.6 and above). The model is also run backwards to answer the more useful question: how much rain does this basin need to reach a 50% chance? That is the number warning systems actually use, because a forecaster can compare it directly against a predicted storm.
+The model is also run backwards to answer the more useful question: how much rain does this basin need to reach a 50% chance? That is the number warning systems actually use, because a forecaster can compare it directly against a predicted storm.
+
+### Likelihood classes, and why High starts at 60%
+
+Basins are classed **Low** (P below 0.2), **Moderate** (0.2 to 0.6) and **High** (0.6 and above).
+
+These breaks are this project's convention, not a published USGS classification. USGS emergency assessments display likelihood in five equal-interval classes: 0 to 20, 20 to 40, 40 to 60, 60 to 80 and 80 to 100 percent (USGS Landslide Hazards Program, scientific background; the 2013 Mountain Fire assessment plates show the same five bins). Here the bottom USGS class becomes Low, the middle two are merged into Moderate, and the top two become High. Every break therefore falls on a USGS class boundary.
+
+60% was chosen over 50% as the High cutoff for two reasons. 50% falls in the middle of a USGS class, not on a boundary. And a coin flip is not what most readers mean by "high": 60% means a debris flow is more likely than not by a clear margin.
+
+The cutoff matters well beyond the colours. It defines the certainty map, the always / sometimes / never stability classes, and the BAER anchor agreement, so every count in the sensitivity results depends on it. It is set in `m1.hazard_class` and mirrored as `sensitivity.HIGH_P`.
+
+### How the two maps relate
+
+The two map views use different probabilities, and that is intentional:
+
+- **Rainfall needed** shows, for each basin, the 15-minute rainfall that gives a **50%** chance of a debris flow.
+- **Certainty** asks whether a basin reaches **60%** in a **24 mm/hr** storm, under each of the six parameter combinations.
+
+The model makes the link between them exact. Rainfall enters M1 only as a multiplier inside the score X, so in every basin X = B + k·R for some basin-specific k. The 50% point is where X = 0 and the 60% point is where X = ln(0.6/0.4) = 0.405, so the rainfall needed for 60% is always (0.405 − B) / (−B) times the rainfall needed for 50%. With the 15-minute coefficient B = −3.63, that ratio is 1.11 for every basin.
+
+So a basin is High at 24 mm/hr exactly when its 50% threshold is at or below 24 / 1.11 = **21.6 mm/hr**. A basin whose threshold falls between 21.6 and 24 mm/hr needs less than 24 mm/hr to reach a coin flip, but is not High at 24 mm/hr. Bridge basin 196 is an example: its threshold is 23.1 mm/hr, its chance at 24 mm/hr is 53%, and it would need about 25.7 mm/hr to reach 60%. It is correctly "not High", even though it looks like it should be on the rainfall map.
 
 ## Three ways this model is easy to get wrong
 
@@ -395,6 +416,8 @@ The comparison also narrows what is at issue. On Bridge, their F, which is mean 
 - USDA NRCS Soil Data Access, STATSGO2
 - CAL FIRE FRAP historic fire perimeters
 - USDA Forest Service BAER Soil Burn Severity Classification, national mosaic, used as the field-validated severity anchor for both fires
+- USGS Landslide Hazards Program, *Scientific Background* for the emergency assessment of post-fire debris-flow hazards, source of the five equal-interval likelihood classes: https://landslides.usgs.gov/hazards/postfire_debrisflow/background2016.php
+- Staley, D.M., Gartner, J.E., Smoczyk, G.M., Reeves, R.R. (2013). Emergency assessment of post-fire debris-flow hazards for the 2013 Mountain fire, southern California. U.S. Geological Survey Open-File Report 2013-1249. An example of the five-class likelihood display: https://pubs.usgs.gov/of/2013/1249
 - Line Fire final acreage, containment history and the Bear Creek flare-up: CAL FIRE incident page, InciWeb daily updates, and San Bernardino County incident information
 
 ## Setup
