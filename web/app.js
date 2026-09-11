@@ -15,7 +15,7 @@ const THRESHOLD_STOPS = [
 
 const STABILITY_COLORS = {
   always:    { color: "#ff4f2b", label: "High whatever we assume" },
-  sometimes: { color: "#ffc857", label: "Depends on the assumptions" },
+  sometimes: { color: "#b07cc6", label: "Depends on the assumptions" },
   never:     { color: "#3a5567", label: "Not high under any assumption" },
 };
 
@@ -26,6 +26,24 @@ const VIEW_NOTES = {
   stability:
     "Whether the basin is rated high hazard at 24 mm/hr across all six " +
     "combinations of severity threshold and soil rule.",
+};
+
+// The two views answer different questions at different probabilities, so each
+// legend states its own. Rainfall needed is the 50% point; Certainty asks
+// whether a basin clears 60% in a fixed 24 mm/hr storm. A basin can therefore
+// need under 24 mm/hr on one map and still not be High on the other: the
+// crossover sits at 24 / 1.11 = 21.6 mm/hr. See m1.hazard_class for the ratio.
+const LEGEND_CAPTIONS = {
+  threshold:
+    "<b>The question:</b> how hard does it have to rain, for 15 minutes, to " +
+    "make a debris flow a coin flip (50%)? Red basins slide with very little " +
+    "rain. Blue basins need a downpour. For scale, 24 mm/hr for 15 minutes is " +
+    "6 mm of rain, about a quarter inch.",
+  stability:
+    "<b>The question:</b> in a 24 mm/hr storm lasting 15 minutes, is a debris " +
+    "flow at least 60% likely? Red, yes, however we set our assumptions. " +
+    "Purple, only under some. Grey, never. 60% is where the top two of USGS's " +
+    "five likelihood classes begin.",
 };
 
 const state = { view: "threshold", manifest: null, fire: null,
@@ -115,13 +133,13 @@ function drawLegend() {
       THRESHOLD_STOPS.map(
         (s) => `<div class="legend-row"><i style="background:${s.color}"></i>${s.label} mm/hr</div>`
       ).join("") +
-      `<p class="legend-caption">Rain over 15 minutes for a 50% chance of a debris flow.</p>`;
+      `<p class="legend-caption">${LEGEND_CAPTIONS.threshold}</p>`;
   } else {
     el.innerHTML =
       Object.values(STABILITY_COLORS)
         .map((s) => `<div class="legend-row"><i style="background:${s.color}"></i>${s.label}</div>`)
         .join("") +
-      `<p class="legend-caption">Across six combinations of severity threshold and soil rule.</p>`;
+      `<p class="legend-caption">${LEGEND_CAPTIONS.stability}</p>`;
   }
 }
 
