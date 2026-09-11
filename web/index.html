@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <link href="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.css" rel="stylesheet">
-<link href="style.css?v=5" rel="stylesheet">
+<link href="style.css?v=6" rel="stylesheet">
 </head>
 <body>
 
@@ -63,11 +63,13 @@
       feed the USGS M1 model, which returns the rainfall each basin needs for a
       50% chance of producing a debris flow.</p>
       <p>The model implementation matches the official USGS package exactly, and
-      reproduces the published USGS assessment for this fire to floating point
-      precision when given their inputs. Compared against a field-validated soil
-      burn severity map, this pipeline runs conservative: it over-warns rather
-      than under-warns, on this fire.</p>
-      <p><a href="https://github.com/jerrod-lessel/postfire-debris-flow">Code and
+      reproduces the published USGS assessment for the Bridge Fire to floating
+      point precision when given their inputs. Compared against field-mapped soil
+      burn severity, this pipeline runs conservative on both fires here: it
+      over-warns rather than under-warns.</p>
+      <p>"High" means at least a 60% chance, which is where the top two of the
+      five likelihood classes USGS publishes begin.</p>
+      <p><a href="https://github.com/jerrod-lessel/scar-threshold">Code and
       full method</a></p>
     </details>
 
@@ -75,6 +77,6 @@
 </aside>
 
 <script src="https://unpkg.com/maplibre-gl@5.1.0/dist/maplibre-gl.js"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
