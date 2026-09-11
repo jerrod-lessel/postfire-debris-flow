@@ -135,7 +135,30 @@ def accumulation(variables, target_p=0.5, duration_min=15,
 
 
 def hazard_class(p):
-    """Discrete rating used for map symbology."""
+    """Discrete likelihood rating used for map symbology and the sensitivity study.
+
+    Returns "Low" for p < 0.2, "Moderate" for 0.2 <= p < 0.6 and "High" for
+    p >= 0.6.
+
+    These breaks are this project's convention, not a published USGS
+    classification. USGS emergency assessments display likelihood in five
+    equal-interval classes (0-20, 20-40, 40-60, 60-80 and 80-100 percent; see
+    https://landslides.usgs.gov/hazards/postfire_debrisflow/background2016.php).
+    Here the bottom USGS class becomes Low, the middle two are merged into
+    Moderate and the top two become High, so every break sits on a USGS class
+    boundary. 0.6 was preferred to 0.5 as the High cutoff because 0.5 falls in
+    the middle of a USGS class, and because a coin flip is not what most readers
+    mean by "high".
+
+    Relation to the rainfall threshold: M1 is linear in R inside the logit, so
+    the rainfall giving P = 0.6 is the same multiple of the rainfall giving
+    P = 0.5 in every basin, (ln(1.5) - B) / (-B), about 1.11 for the 15-minute
+    coefficients. A basin is therefore High at 24 mm/hr exactly when its 50%
+    threshold is at or below about 21.6 mm/hr. Basins between 21.6 and 24 mm/hr
+    reach a coin flip before 24 mm/hr but are not High there; that is expected.
+
+    ``sensitivity.HIGH_P`` mirrors the 0.6 cutoff and must be kept in step.
+    """
     if p < 0.2:
         return "Low"
     if p < 0.6:
